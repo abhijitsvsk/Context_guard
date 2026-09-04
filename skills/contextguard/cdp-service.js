@@ -341,7 +341,7 @@ class ContextGuardCDPService {
     const js = `
     (function() {
       let el = document.getElementById('contextguard-dom-badge');
-      if (el && (!el.querySelector('#contextguard-badge-header') || !el.__cg_draggable || el.__cg_theme !== 'doodle_black')) {
+      if (el && (!el.querySelector('#contextguard-badge-header') || !el.__cg_draggable || el.__cg_theme !== 'doodle_black_v2')) {
         el.remove();
         el = null;
       }
@@ -350,7 +350,7 @@ class ContextGuardCDPService {
         el.id = 'contextguard-dom-badge';
         el.__isExpanded = false;
         el.__cg_draggable = true;
-        el.__cg_theme = 'doodle_black';
+        el.__cg_theme = 'doodle_black_v2';
 
         el.style.position = 'fixed';
         el.style.zIndex = '999999';
@@ -370,19 +370,27 @@ class ContextGuardCDPService {
         let savedPos = null;
         try {
           savedPos = JSON.parse(localStorage.getItem('contextguard_badge_pos') || 'null');
+          if (savedPos && typeof savedPos.top === 'number' && savedPos.top < 38) {
+            localStorage.removeItem('contextguard_badge_pos');
+            savedPos = null;
+          }
         } catch(e) {}
 
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
-          el.style.top = Math.max(0, Math.min(window.innerHeight - 30, savedPos.top)) + 'px';
-          el.style.left = Math.max(0, Math.min(window.innerWidth - 60, savedPos.left)) + 'px';
+          el.style.top = Math.max(40, Math.min(window.innerHeight - 40, savedPos.top)) + 'px';
+          el.style.left = Math.max(10, Math.min(window.innerWidth - 80, savedPos.left)) + 'px';
           el.style.right = 'auto';
         } else {
-          el.style.top = '14px';
-          el.style.right = '280px';
+          el.style.top = '48px';
+          el.style.right = '260px';
         }
+
+        el.style.setProperty('-webkit-app-region', 'no-drag', 'important');
 
         const header = document.createElement('div');
         header.id = 'contextguard-badge-header';
+        header.title = 'Click to expand/collapse, drag to move';
+        header.style.setProperty('-webkit-app-region', 'no-drag', 'important');
         header.style.padding = '5px 14px';
         header.style.display = 'flex';
         header.style.alignItems = 'center';
@@ -469,6 +477,7 @@ class ContextGuardCDPService {
 
         header.addEventListener('mousedown', function(e) {
           if (e.button !== 0) return;
+          e.preventDefault();
           isDragging = false;
           hasMoved = false;
           startX = e.clientX;
@@ -487,10 +496,10 @@ class ContextGuardCDPService {
               document.body.style.userSelect = 'none';
             }
             if (isDragging) {
-              const maxLeft = Math.max(0, window.innerWidth - (el.offsetWidth || 150));
-              const maxTop = Math.max(0, window.innerHeight - (el.offsetHeight || 30));
-              const curLeft = Math.max(0, Math.min(maxLeft, initialLeft + dx));
-              const curTop = Math.max(0, Math.min(maxTop, initialTop + dy));
+              const maxLeft = Math.max(10, window.innerWidth - (el.offsetWidth || 150) - 10);
+              const maxTop = Math.max(40, window.innerHeight - (el.offsetHeight || 30) - 10);
+              const curLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
+              const curTop = Math.max(40, Math.min(maxTop, initialTop + dy));
               el.style.left = curLeft + 'px';
               el.style.top = curTop + 'px';
               el.style.right = 'auto';
@@ -500,11 +509,12 @@ class ContextGuardCDPService {
           function onMouseUp() {
             document.removeEventListener('mousemove', onMouseMove, true);
             document.removeEventListener('mouseup', onMouseUp, true);
+            window.removeEventListener('mouseup', onMouseUp, true);
             header.style.cursor = 'grab';
             document.body.style.userSelect = '';
             if (hasMoved) {
               el.__justDragged = true;
-              setTimeout(function() { el.__justDragged = false; }, 150);
+              setTimeout(function() { el.__justDragged = false; }, 200);
               try {
                 const rect = el.getBoundingClientRect();
                 localStorage.setItem('contextguard_badge_pos', JSON.stringify({ top: Math.round(rect.top), left: Math.round(rect.left) }));
@@ -514,6 +524,7 @@ class ContextGuardCDPService {
 
           document.addEventListener('mousemove', onMouseMove, true);
           document.addEventListener('mouseup', onMouseUp, true);
+          window.addEventListener('mouseup', onMouseUp, true);
         });
 
         header.addEventListener('click', function(e) {
@@ -541,6 +552,14 @@ class ContextGuardCDPService {
             window.contextGuardTriggerHandoff(cid);
           }
         });
+      }
+
+      const curT = parseInt(el.style.top, 10);
+      if (isNaN(curT) || curT < 40) {
+        el.style.top = '48px';
+        el.style.right = '260px';
+        el.style.left = 'auto';
+        try { localStorage.removeItem('contextguard_badge_pos'); } catch(e) {}
       }
 
       el.setAttribute('data-chat-id', '${chatId}');
