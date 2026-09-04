@@ -341,7 +341,7 @@ class ContextGuardCDPService {
     const js = `
     (function() {
       let el = document.getElementById('contextguard-dom-badge');
-      if (el && (!el.querySelector('#contextguard-badge-header') || !el.__cg_draggable || el.__cg_theme !== 'doodle_black_v2')) {
+      if (el && (!el.querySelector('#contextguard-badge-header') || !el.__cg_draggable || el.__cg_theme !== 'doodle_black_v3')) {
         el.remove();
         el = null;
       }
@@ -350,7 +350,7 @@ class ContextGuardCDPService {
         el.id = 'contextguard-dom-badge';
         el.__isExpanded = false;
         el.__cg_draggable = true;
-        el.__cg_theme = 'doodle_black_v2';
+        el.__cg_theme = 'doodle_black_v3';
 
         el.style.position = 'fixed';
         el.style.zIndex = '999999';
@@ -370,18 +370,14 @@ class ContextGuardCDPService {
         let savedPos = null;
         try {
           savedPos = JSON.parse(localStorage.getItem('contextguard_badge_pos') || 'null');
-          if (savedPos && typeof savedPos.top === 'number' && savedPos.top < 38) {
-            localStorage.removeItem('contextguard_badge_pos');
-            savedPos = null;
-          }
         } catch(e) {}
 
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
-          el.style.top = Math.max(40, Math.min(window.innerHeight - 40, savedPos.top)) + 'px';
-          el.style.left = Math.max(10, Math.min(window.innerWidth - 80, savedPos.left)) + 'px';
+          el.style.top = Math.max(0, Math.min(window.innerHeight - 30, savedPos.top)) + 'px';
+          el.style.left = Math.max(0, Math.min(window.innerWidth - 60, savedPos.left)) + 'px';
           el.style.right = 'auto';
         } else {
-          el.style.top = '48px';
+          el.style.top = '6px';
           el.style.right = '260px';
         }
 
@@ -416,6 +412,7 @@ class ContextGuardCDPService {
 
         const panel = document.createElement('div');
         panel.id = 'contextguard-badge-panel';
+        panel.style.setProperty('-webkit-app-region', 'no-drag', 'important');
         panel.style.display = 'none';
         panel.style.flexDirection = 'column';
         panel.style.gap = '8px';
@@ -446,6 +443,7 @@ class ContextGuardCDPService {
 
         const btn = document.createElement('button');
         btn.id = 'contextguard-handoff-action-btn';
+        btn.style.setProperty('-webkit-app-region', 'no-drag', 'important');
         btn.style.background = '#111111';
         btn.style.border = '1.5px dashed #38BDF8';
         btn.style.color = '#38BDF8';
@@ -496,10 +494,10 @@ class ContextGuardCDPService {
               document.body.style.userSelect = 'none';
             }
             if (isDragging) {
-              const maxLeft = Math.max(10, window.innerWidth - (el.offsetWidth || 150) - 10);
-              const maxTop = Math.max(40, window.innerHeight - (el.offsetHeight || 30) - 10);
-              const curLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
-              const curTop = Math.max(40, Math.min(maxTop, initialTop + dy));
+              const maxLeft = Math.max(0, window.innerWidth - (el.offsetWidth || 150));
+              const maxTop = Math.max(0, window.innerHeight - (el.offsetHeight || 30));
+              const curLeft = Math.max(0, Math.min(maxLeft, initialLeft + dx));
+              const curTop = Math.max(0, Math.min(maxTop, initialTop + dy));
               el.style.left = curLeft + 'px';
               el.style.top = curTop + 'px';
               el.style.right = 'auto';
@@ -555,11 +553,10 @@ class ContextGuardCDPService {
       }
 
       const curT = parseInt(el.style.top, 10);
-      if (isNaN(curT) || curT < 40) {
-        el.style.top = '48px';
+      if (isNaN(curT) || curT < 0) {
+        el.style.top = '6px';
         el.style.right = '260px';
         el.style.left = 'auto';
-        try { localStorage.removeItem('contextguard_badge_pos'); } catch(e) {}
       }
 
       el.setAttribute('data-chat-id', '${chatId}');
