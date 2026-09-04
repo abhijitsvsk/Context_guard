@@ -6,11 +6,29 @@ ContextGuard tracks token usage across Antigravity sessions in real time, displa
 
 ---
 
+## ⚡ Quick Install (1 Line)
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/abhijitsvsk/Context_guard/main/install.ps1 | iex
+```
+
+This single command will:
+- ✅ Clone the plugin into `~/.gemini/config/plugins/contextguard`
+- ✅ Register the Antigravity native sidecar (auto-launch on app open)
+- ✅ Enable the plugin and sidecar in `config.json`
+- ✅ Add a Windows startup service for persistence
+- ✅ Launch the background daemon immediately
+
+> Restart Antigravity after install to see the live badge. Or type `/contextguard status` in any chat.
+
+---
+
 ## ✨ Features
 
 - **⚡ Real-Time CDP In-DOM Overlay**: Connects directly to Antigravity's internal Chrome DevTools Protocol (CDP) port. Automatically injects and updates a live `♡ ContextGuard: XX% ([ LEVEL ])` badge into your Antigravity window.
 - **🎯 Draggable & Position Persistent**: Freely drag the blackboard badge anywhere on your screen (including title bars, auxiliary panels, or margins with edge protection). Your preferred badge coordinates are remembered across sessions in `context_guard_pos.json`.
-- **🔄 Instant Tab-Switch Detection**: Hooks into `Page.navigatedWithinDocument` CDP events to detect Single-Page App (SPA) navigation instantly ($O(1)$ response time) when switching between chat sessions.
+- **🔄 Instant Tab-Switch Detection**: Hooks into `Page.navigatedWithinDocument` CDP events to detect Single-Page App (SPA) navigation instantly when switching between chat sessions.
 - **📋 Non-Destructive Handoff Modal**: Click `[ handoff ]` right from the in-DOM badge to view and copy a structured continuation handoff directly without leaving your chat.
 - **🎨 Dark Chalkboard Doodle Aesthetic**: Hand-crafted blackboard chalkboard visual style with chalk doodle typography and vibrant status badges.
 - **🛡️ 5-Tier Warning Thresholds**:
@@ -36,6 +54,7 @@ ContextGuard tracks token usage across Antigravity sessions in real time, displa
 
 ```text
 Context_guard/
+├── install.ps1                     # 1-line PowerShell installer
 ├── plugin.json                     # Antigravity plugin manifest
 ├── hooks.json                      # PreInvocation & PostToolUse lifecycle hooks
 ├── contextguard-panel.html         # Interactive HTML widget panel
@@ -54,25 +73,23 @@ Context_guard/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Manual Installation
 
-### 1. Installation
+If you prefer manual setup over the 1-line installer:
 
-Clone into your workspace's `.agents/plugins/` directory:
+### 1. Clone
 
+Into your workspace:
 ```bash
 git clone https://github.com/abhijitsvsk/Context_guard.git .agents/plugins/contextguard
 ```
 
-Or install globally into your Antigravity configuration directory:
-
+Or globally:
 ```bash
 git clone https://github.com/abhijitsvsk/Context_guard.git ~/.gemini/config/plugins/contextguard
 ```
 
 ### 2. Native Antigravity Sidecar (Automatic Launch)
-
-To have ContextGuard start automatically every time Antigravity opens:
 
 1. Create `~/.gemini/config/sidecars/contextguard/sidecar.json`:
 ```json
@@ -102,8 +119,6 @@ Antigravity will now automatically launch ContextGuard whenever the application 
 
 ### 3. CLI Commands & Slash Commands
 
-You can run ContextGuard commands directly from the terminal or chat:
-
 ```bash
 # Display live chalk doodle telemetry card
 node skills/contextguard/contextguard.js status
@@ -119,6 +134,26 @@ node skills/contextguard/contextguard.js history
 
 # Reset local history database
 node skills/contextguard/contextguard.js reset
+```
+
+---
+
+## 🗑️ Uninstall
+
+```powershell
+# Remove plugin
+Remove-Item -Path "$env:USERPROFILE\.gemini\config\plugins\contextguard" -Recurse -Force
+
+# Remove sidecar
+Remove-Item -Path "$env:USERPROFILE\.gemini\config\sidecars\contextguard" -Recurse -Force
+
+# Remove startup script
+Remove-Item -Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\contextguard-autostart.vbs" -Force
+
+# Kill running daemon
+Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" |
+  Where-Object { $_.CommandLine -like '*cdp-service.js*' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 ```
 
 ---
