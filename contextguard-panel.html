@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>♡ ContextGuard ~ In-IDE Panel</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&family=Fira+Code:wght@500&display=swap');
+    
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #050505;
+      color: #F0F0F0;
+      font-family: 'Comic Neue', 'Comic Sans MS', cursive, sans-serif;
+      padding: 16px;
+      margin: 0;
+      user-select: none;
+    }
+
+    .doodle-card {
+      background-color: #0A0A0A;
+      border: 2.5px solid #E0E0E0;
+      border-radius: 18px;
+      padding: 18px;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.9);
+      position: relative;
+    }
+
+    .doodle-card::after {
+      content: '';
+      position: absolute;
+      top: 4px; left: 4px; right: 4px; bottom: 4px;
+      border: 1px dashed #555;
+      border-radius: 14px;
+      pointer-events: none;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 20px;
+      color: #FFFFFF;
+      letter-spacing: 0.5px;
+    }
+
+    .pill-btn {
+      background: #111;
+      border: 2px solid #239B43;
+      color: #239B43;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .pill-btn:hover {
+      background: #239B43;
+      color: #000;
+    }
+
+    .progress-section {
+      margin: 16px 0;
+    }
+
+    .pct-label {
+      font-size: 24px;
+      color: #239B43;
+      font-weight: bold;
+    }
+
+    .capsule-bar {
+      height: 22px;
+      border: 2px solid #E0E0E0;
+      border-radius: 11px;
+      background: #111;
+      overflow: hidden;
+      margin-top: 6px;
+      position: relative;
+    }
+
+    .capsule-fill {
+      height: 100%;
+      width: 0%;
+      background: #239B43;
+      border-radius: 9px;
+      box-shadow: 0 0 10px #239B43;
+      background-image: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 4px,
+        rgba(0, 0, 0, 0.35) 4px,
+        rgba(0, 0, 0, 0.35) 6px
+      );
+      transition: width 0.3s ease;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 10px;
+      background: #151515;
+      border: 2px solid #239B43;
+      color: #239B43;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .meta-text {
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      color: #AAA;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="doodle-card">
+    <div class="header">
+      <div class="title">♡ ContextGuard</div>
+      <button class="pill-btn" onclick="fetchTelemetry()">🔄 refresh...</button>
+    </div>
+    <div class="progress-section">
+      <div class="pct-label" id="pctLabel">0%</div>
+      <div class="capsule-bar">
+        <div class="capsule-fill" id="capsuleFill"></div>
+      </div>
+    </div>
+    <div class="status-badge" id="badgeLabel">[ OK ] NORMAL</div>
+    <div class="meta-text" id="metaText">
+      Tokens: 0 / 1.04M (Estimated)<br>
+      Remaining: 1,048,576 Tokens<br>
+      Session: active_session<br>
+      Advice: Optimal context usage.
+    </div>
+    <div class="actions">
+      <button class="pill-btn" onclick="copyHandoff()">📋 handoff summary</button>
+    </div>
+  </div>
+
+  <script>
+    async function fetchTelemetry() {
+      try {
+        const res = await fetch('./data/context_guard_live.json?' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('pctLabel').innerText = data.percentageUsed + '%';
+          document.getElementById('pctLabel').style.color = data.hexColor;
+          document.getElementById('capsuleFill').style.width = data.percentageUsed + '%';
+          document.getElementById('capsuleFill').style.backgroundColor = data.hexColor;
+          document.getElementById('capsuleFill').style.boxShadow = '0 0 10px ' + data.hexColor;
+          document.getElementById('badgeLabel').innerText = data.badge + ' ' + data.level;
+          document.getElementById('badgeLabel').style.borderColor = data.hexColor;
+          document.getElementById('badgeLabel').style.color = data.hexColor;
+          document.getElementById('metaText').innerHTML = 
+            'Tokens: ' + data.tokensUsed.toLocaleString() + ' / 1.04M (' + data.precision + ')<br>' +
+            'Remaining: ' + data.remainingTokens.toLocaleString() + ' Tokens<br>' +
+            'Session: ' + data.conversationId + '<br>' +
+            'Advice: ' + data.advice;
+        }
+      } catch (e) {}
+    }
+
+    function copyHandoff() {
+      alert('Run /contextguard handoff in your chat to copy the continuation handoff summary!');
+    }
+
+    setInterval(fetchTelemetry, 1000);
+    fetchTelemetry();
+  </script>
+</body>
+</html>

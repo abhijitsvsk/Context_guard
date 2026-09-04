@@ -1,0 +1,24 @@
+{
+  "contextguard-plugin-hooks": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node skills/contextguard/autostart.js"
+      },
+      {
+        "type": "command",
+        "command": "node skills/contextguard/contextguard.js refresh"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "node skills/contextguard/autostart.js"
+      },
+      {
+        "type": "command",
+        "command": "node skills/contextguard/contextguard.js refresh"
+      }
+    ]
+  }
+}

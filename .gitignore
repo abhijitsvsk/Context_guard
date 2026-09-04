@@ -1,0 +1,4 @@
+﻿*.log
+*.lock
+skills/contextguard/data/*
+!skills/contextguard/data/.gitkeep
