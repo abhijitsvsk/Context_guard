@@ -28,7 +28,7 @@ process.on('unhandledRejection', (reason) => {
 
 class ContextGuardCDPService {
   constructor() {
-    this.mode = 'DISCOVERING'; // DISCOVERING, CDP_ACTIVE
+    this.mode = 'DISCOVERING';
     this.currentChatId = null;
     this.ws = null;
     this.cdpPort = null;
@@ -102,6 +102,12 @@ class ContextGuardCDPService {
   async start() {
     log(`[CDP Service] Starting persistent ContextGuard service (PID: ${process.pid})...`);
     
+    try {
+      const myPid = process.pid;
+      const cmd = `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"Name = 'node.exe'\\" | Where-Object { $_.CommandLine -like '*cdp-service.js*' -and $_.ProcessId -ne ${myPid} } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`;
+      exec(cmd, () => {});
+    } catch (e) {}
+
     if (!this.keepAliveInterval) {
       this.keepAliveInterval = setInterval(() => {}, 30000);
     }
@@ -231,22 +237,29 @@ class ContextGuardCDPService {
         log(`[CDP Service] Generated handoff successfully at: ${handoffPath}`);
       }
 
+      const jsonStr = JSON.stringify(handoffMd);
       const feedbackJs = `
         (function() {
           const btn = document.getElementById('contextguard-handoff-action-btn');
+          const content = ${jsonStr};
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(content).catch(function() {});
+            }
+          } catch(e) {}
           if (btn) {
-            btn.innerHTML = '✓ Saved handoff.md!';
+            btn.innerText = '✓ Copied & Saved handoff.md!';
             btn.style.backgroundColor = '#166534';
             btn.style.borderColor = '#22C55E';
             btn.style.color = '#FFFFFF';
-            setTimeout(() => {
+            setTimeout(function() {
               if (btn) {
-                btn.innerHTML = '📋 Generate Handoff';
+                btn.innerText = '📋 Generate Handoff';
                 btn.style.backgroundColor = '#1E293B';
                 btn.style.borderColor = '#38BDF8';
                 btn.style.color = '#38BDF8';
               }
-            }, 2500);
+            }, 3000);
           }
         })()
       `;
@@ -284,7 +297,7 @@ class ContextGuardCDPService {
         const badge = document.getElementById('contextguard-dom-badge');
         if (badge && badge.__isExpanded) {
           badge.__isExpanded = false;
-          if (window.__cg_render_badge) window.__cg_render_badge();
+          if (window.__cg_update_badge_view) window.__cg_update_badge_view();
         }
       })()
     `);
@@ -328,6 +341,10 @@ class ContextGuardCDPService {
     const js = `
     (function() {
       let el = document.getElementById('contextguard-dom-badge');
+      if (el && !el.querySelector('#contextguard-badge-header')) {
+        el.remove();
+        el = null;
+      }
       if (!el) {
         el = document.createElement('div');
         el.id = 'contextguard-dom-badge';
@@ -338,70 +355,148 @@ class ContextGuardCDPService {
         el.style.right = '280px';
         el.style.zIndex = '999999';
         el.style.background = '#0F172A';
-        el.style.border = '2px solid ${hexColor}';
-        el.style.color = '${hexColor}';
-        el.style.borderRadius = '9999px';
         el.style.fontFamily = 'Consolas, monospace';
         el.style.fontSize = '12px';
         el.style.fontWeight = 'bold';
         el.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.6)';
-        el.style.transition = 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
-        el.style.cursor = 'pointer';
         el.style.userSelect = 'none';
         el.style.display = 'flex';
         el.style.flexDirection = 'column';
         el.style.overflow = 'hidden';
+        el.style.transition = 'border-radius 0.15s ease';
 
+        const header = document.createElement('div');
+        header.id = 'contextguard-badge-header';
+        header.style.padding = '5px 14px';
+        header.style.display = 'flex';
+        header.style.alignItems = 'center';
+        header.style.justifyContent = 'space-between';
+        header.style.gap = '8px';
+        header.style.cursor = 'pointer';
+        header.style.whiteSpace = 'nowrap';
+
+        const title = document.createElement('span');
+        title.id = 'contextguard-badge-title';
+        header.appendChild(title);
+
+        const arrow = document.createElement('span');
+        arrow.id = 'contextguard-badge-arrow';
+        arrow.style.fontSize = '10px';
+        arrow.style.opacity = '0.6';
+        arrow.style.display = 'none';
+        arrow.innerText = '▲';
+        header.appendChild(arrow);
+
+        const panel = document.createElement('div');
+        panel.id = 'contextguard-badge-panel';
+        panel.style.display = 'none';
+        panel.style.flexDirection = 'column';
+        panel.style.gap = '8px';
+        panel.style.padding = '8px 14px 10px 14px';
+        panel.style.background = 'rgba(0, 0, 0, 0.35)';
+        panel.style.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
+
+        const metaRow = document.createElement('div');
+        metaRow.style.display = 'flex';
+        metaRow.style.justifyContent = 'space-between';
+        metaRow.style.fontSize = '10px';
+        metaRow.style.color = '#94A3B8';
+        metaRow.style.fontWeight = 'normal';
+
+        const sessionLabel = document.createElement('span');
+        sessionLabel.id = 'contextguard-badge-session';
+        metaRow.appendChild(sessionLabel);
+
+        const precLabel = document.createElement('span');
+        precLabel.id = 'contextguard-badge-prec';
+        metaRow.appendChild(precLabel);
+        panel.appendChild(metaRow);
+
+        const btn = document.createElement('button');
+        btn.id = 'contextguard-handoff-action-btn';
+        btn.style.background = '#1E293B';
+        btn.style.border = '1.5px solid #38BDF8';
+        btn.style.color = '#38BDF8';
+        btn.style.borderRadius = '6px';
+        btn.style.padding = '6px 12px';
+        btn.style.fontSize = '11px';
+        btn.style.fontFamily = 'Consolas, monospace';
+        btn.style.fontWeight = 'bold';
+        btn.style.cursor = 'pointer';
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+        btn.style.gap = '6px';
+        btn.style.transition = 'all 0.2s ease';
+        btn.innerText = '📋 Generate Handoff';
+        panel.appendChild(btn);
+
+        el.appendChild(header);
+        el.appendChild(panel);
         document.body.appendChild(el);
-      }
 
-      if (!el.__cg_click_bound) {
-        el.__cg_click_bound = true;
-        el.addEventListener('click', function(e) {
-          if (e.target.closest('#contextguard-handoff-action-btn')) return;
+        header.addEventListener('click', function(e) {
+          e.stopPropagation();
           el.__isExpanded = !el.__isExpanded;
-          if (window.__cg_render_badge) window.__cg_render_badge();
+          updateView();
         });
-      }
 
-      if (!window.__cg_outside_click_installed) {
-        window.__cg_outside_click_installed = true;
-        document.addEventListener('click', function(e) {
-          const badge = document.getElementById('contextguard-dom-badge');
-          if (badge && !badge.contains(e.target) && badge.__isExpanded) {
-            badge.__isExpanded = false;
-            if (window.__cg_render_badge) window.__cg_render_badge();
+        panel.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const cid = el.getAttribute('data-chat-id') || '';
+          if (window.contextGuardTriggerHandoff) {
+            window.contextGuardTriggerHandoff(cid);
           }
         });
       }
 
+      el.setAttribute('data-chat-id', '${chatId}');
       el.style.borderColor = '${hexColor}';
       el.style.color = '${hexColor}';
+      el.style.border = '2px solid ${hexColor}';
 
-      window.__cg_render_badge = function() {
-        const isExp = el.__isExpanded;
-        if (!isExp) {
-          el.style.borderRadius = '9999px';
-          el.innerHTML = '<div style="padding: 5px 14px; display: flex; align-items: center; gap: 6px; white-space: nowrap;">♡ ContextGuard: ${textContent}</div>';
-        } else {
-          el.style.borderRadius = '12px';
-          el.innerHTML = \`
-            <div style="padding: 6px 14px 4px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px dashed rgba(255,255,255,0.15); white-space: nowrap;">
-              <span>♡ ContextGuard: ${textContent}</span>
-              <span style="font-size: 10px; opacity: 0.6;">▲</span>
-            </div>
-            <div style="padding: 8px 14px 10px 14px; display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,0.3);">
-              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94A3B8; font-weight: normal;">
-                <span>Session: ${chatId.substring(0, 10)}...</span>
-                <span>${precisionText}</span>
-              </div>
-              <button id="contextguard-handoff-action-btn" onclick="event.stopPropagation(); if (window.contextGuardTriggerHandoff) window.contextGuardTriggerHandoff('${chatId}');" style="background: #1E293B; border: 1.5px solid #38BDF8; color: #38BDF8; border-radius: 6px; padding: 5px 12px; font-size: 11px; font-family: Consolas, monospace; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">📋 Generate Handoff</button>
-            </div>
-          \`;
+      const titleEl = document.getElementById('contextguard-badge-title');
+      if (titleEl) titleEl.innerText = '♡ ContextGuard: ${textContent}';
+
+      const sessionEl = document.getElementById('contextguard-badge-session');
+      if (sessionEl) sessionEl.innerText = 'Session: ${chatId.substring(0, 10)}...';
+
+      const precEl = document.getElementById('contextguard-badge-prec');
+      if (precEl) precEl.innerText = '${precisionText}';
+
+      function updateView() {
+        const b = document.getElementById('contextguard-dom-badge');
+        if (!b) return;
+        const isExp = !!b.__isExpanded;
+        b.style.borderRadius = isExp ? '12px' : '9999px';
+        const panelEl = document.getElementById('contextguard-badge-panel');
+        if (panelEl) panelEl.style.display = isExp ? 'flex' : 'none';
+        const arrowEl = document.getElementById('contextguard-badge-arrow');
+        if (arrowEl) arrowEl.style.display = isExp ? 'inline' : 'none';
+      }
+
+      if (window.__cg_doc_click_handler) {
+        document.removeEventListener('click', window.__cg_doc_click_handler, true);
+        document.removeEventListener('click', window.__cg_doc_click_handler, false);
+      }
+      window.__cg_doc_click_handler = function(e) {
+        const b = document.getElementById('contextguard-dom-badge');
+        if (b && !b.contains(e.target)) {
+          const panel = document.getElementById('contextguard-badge-panel');
+          if (b.__isExpanded || (panel && panel.style.display !== 'none')) {
+            b.__isExpanded = false;
+            updateView();
+          }
         }
       };
+      document.addEventListener('click', window.__cg_doc_click_handler, true);
 
-      window.__cg_render_badge();
+      window.__cg_update_badge_view = updateView;
+      updateView();
     })()
     `;
     this.evalJS(js);
