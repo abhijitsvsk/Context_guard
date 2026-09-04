@@ -6,17 +6,12 @@ function ensureCDPServiceRunning() {
   const serviceScript = path.join(__dirname, 'cdp-service.js');
   if (!fs.existsSync(serviceScript)) return;
 
-  const cmd = `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"Name = 'node.exe'\\" | Where-Object CommandLine -like '*cdp-service.js*'"`;
-  exec(cmd, (err, stdout) => {
+  const checkCmd = `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"Name = 'node.exe'\\" | Where-Object CommandLine -like '*cdp-service.js*'"`;
+  exec(checkCmd, (err, stdout) => {
     if (!stdout || !stdout.trim()) {
       try {
-        const child = spawn(process.execPath, [serviceScript], {
-          detached: true,
-          stdio: 'ignore',
-          windowsHide: true,
-          cwd: __dirname
-        });
-        child.unref();
+        const launchCmd = `powershell -NoProfile -Command "Start-Process -FilePath '${process.execPath}' -ArgumentList '${serviceScript.replace(/'/g, "''")}' -WorkingDirectory '${__dirname.replace(/'/g, "''")}' -WindowStyle Hidden"`;
+        exec(launchCmd, () => {});
       } catch (e) {}
     }
   });

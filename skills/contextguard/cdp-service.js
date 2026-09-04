@@ -39,7 +39,7 @@ class ContextGuardCDPService {
   }
 
   async discoverCDPPort() {
-    const priorityPorts = [this.cdpPort, 50270, 61009, 9222, 9229].filter(Boolean);
+    const priorityPorts = [this.cdpPort, 60152, 50270, 61009, 9222, 9229].filter(Boolean);
     for (const port of priorityPorts) {
       const target = await this.checkPortForAntigravity(port);
       if (target) return target;
@@ -73,7 +73,7 @@ class ContextGuardCDPService {
 
   getListeningPorts() {
     return new Promise((resolve) => {
-      const cmd = `powershell -NoProfile -Command "Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort -Unique | ConvertTo-Json"`;
+      const cmd = `powershell -NoProfile -Command "$agPids = (Get-Process -Name 'Antigravity' -ErrorAction SilentlyContinue).Id; if ($agPids) { Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $agPids -contains $_.OwningProcess } | Select-Object -ExpandProperty LocalPort -Unique | ConvertTo-Json } else { Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort -Unique | ConvertTo-Json }"`;
       exec(cmd, (err, stdout) => {
         if (err || !stdout) return resolve([]);
         try {
