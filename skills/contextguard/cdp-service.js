@@ -249,13 +249,13 @@ class ContextGuardCDPService {
           } catch(e) {}
           if (btn) {
             btn.innerText = '✓ Copied & Saved handoff.md!';
-            btn.style.backgroundColor = '#166534';
+            btn.style.backgroundColor = '#0a2318';
             btn.style.borderColor = '#22C55E';
-            btn.style.color = '#FFFFFF';
+            btn.style.color = '#4ade80';
             setTimeout(function() {
               if (btn) {
                 btn.innerText = '📋 Generate Handoff';
-                btn.style.backgroundColor = '#1E293B';
+                btn.style.backgroundColor = '#111111';
                 btn.style.borderColor = '#38BDF8';
                 btn.style.color = '#38BDF8';
               }
@@ -341,7 +341,7 @@ class ContextGuardCDPService {
     const js = `
     (function() {
       let el = document.getElementById('contextguard-dom-badge');
-      if (el && (!el.querySelector('#contextguard-badge-header') || !el.__cg_draggable)) {
+      if (el && (!el.querySelector('#contextguard-badge-header') || !el.__cg_draggable || el.__cg_theme !== 'doodle_black')) {
         el.remove();
         el = null;
       }
@@ -350,14 +350,16 @@ class ContextGuardCDPService {
         el.id = 'contextguard-dom-badge';
         el.__isExpanded = false;
         el.__cg_draggable = true;
+        el.__cg_theme = 'doodle_black';
 
         el.style.position = 'fixed';
         el.style.zIndex = '999999';
-        el.style.background = '#0F172A';
-        el.style.fontFamily = 'Consolas, monospace';
+        el.style.background = '#050505';
+        el.style.fontFamily = "'Comic Neue', 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', cursive, sans-serif";
         el.style.fontSize = '12px';
         el.style.fontWeight = 'bold';
-        el.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.6)';
+        el.style.letterSpacing = '0.5px';
+        el.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.04)';
         el.style.userSelect = 'none';
         el.style.display = 'flex';
         el.style.flexDirection = 'column';
@@ -388,15 +390,18 @@ class ContextGuardCDPService {
         header.style.gap = '8px';
         header.style.cursor = 'grab';
         header.style.whiteSpace = 'nowrap';
+        header.style.fontFamily = "'Comic Neue', 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', cursive, sans-serif";
+        header.style.textShadow = '0 0 2px rgba(255, 255, 255, 0.2)';
 
         const title = document.createElement('span');
         title.id = 'contextguard-badge-title';
+        title.style.fontFamily = 'inherit';
         header.appendChild(title);
 
         const arrow = document.createElement('span');
         arrow.id = 'contextguard-badge-arrow';
         arrow.style.fontSize = '10px';
-        arrow.style.opacity = '0.6';
+        arrow.style.opacity = '0.7';
         arrow.style.display = 'none';
         arrow.innerText = '▲';
         header.appendChild(arrow);
@@ -407,40 +412,47 @@ class ContextGuardCDPService {
         panel.style.flexDirection = 'column';
         panel.style.gap = '8px';
         panel.style.padding = '8px 14px 10px 14px';
-        panel.style.background = 'rgba(0, 0, 0, 0.35)';
-        panel.style.borderTop = '1px dashed rgba(255, 255, 255, 0.15)';
+        panel.style.background = '#090909';
+        panel.style.borderTop = '1.5px dashed rgba(255, 255, 255, 0.2)';
+        panel.style.fontFamily = "'Comic Neue', 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', cursive, sans-serif";
 
         const metaRow = document.createElement('div');
         metaRow.style.display = 'flex';
         metaRow.style.justifyContent = 'space-between';
-        metaRow.style.fontSize = '10px';
-        metaRow.style.color = '#94A3B8';
+        metaRow.style.fontSize = '11px';
+        metaRow.style.color = '#A0A0A0';
+        metaRow.style.fontFamily = "'Comic Neue', 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', cursive, sans-serif";
         metaRow.style.fontWeight = 'normal';
+        metaRow.style.letterSpacing = '0.3px';
 
         const sessionLabel = document.createElement('span');
         sessionLabel.id = 'contextguard-badge-session';
+        sessionLabel.style.fontFamily = 'inherit';
         metaRow.appendChild(sessionLabel);
 
         const precLabel = document.createElement('span');
         precLabel.id = 'contextguard-badge-prec';
+        precLabel.style.fontFamily = 'inherit';
         metaRow.appendChild(precLabel);
         panel.appendChild(metaRow);
 
         const btn = document.createElement('button');
         btn.id = 'contextguard-handoff-action-btn';
-        btn.style.background = '#1E293B';
-        btn.style.border = '1.5px solid #38BDF8';
+        btn.style.background = '#111111';
+        btn.style.border = '1.5px dashed #38BDF8';
         btn.style.color = '#38BDF8';
-        btn.style.borderRadius = '6px';
-        btn.style.padding = '6px 12px';
-        btn.style.fontSize = '11px';
-        btn.style.fontFamily = 'Consolas, monospace';
+        btn.style.borderRadius = '8px';
+        btn.style.padding = '6px 14px';
+        btn.style.fontSize = '12px';
+        btn.style.fontFamily = "'Comic Neue', 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', cursive, sans-serif";
         btn.style.fontWeight = 'bold';
+        btn.style.letterSpacing = '0.5px';
         btn.style.cursor = 'pointer';
         btn.style.display = 'flex';
         btn.style.alignItems = 'center';
         btn.style.justifyContent = 'center';
         btn.style.gap = '6px';
+        btn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.7)';
         btn.style.transition = 'all 0.2s ease';
         btn.innerText = '📋 Generate Handoff';
         panel.appendChild(btn);
@@ -534,10 +546,13 @@ class ContextGuardCDPService {
       el.setAttribute('data-chat-id', '${chatId}');
       el.style.borderColor = '${hexColor}';
       el.style.color = '${hexColor}';
-      el.style.border = '2px solid ${hexColor}';
+      el.style.border = '2px dashed ${hexColor}';
 
       const titleEl = document.getElementById('contextguard-badge-title');
-      if (titleEl) titleEl.innerText = '♡ ContextGuard: ${textContent}';
+      if (titleEl) {
+        titleEl.innerText = '♡ ContextGuard: ${textContent}';
+        titleEl.style.color = '${hexColor}';
+      }
 
       const sessionEl = document.getElementById('contextguard-badge-session');
       if (sessionEl) sessionEl.innerText = 'Session: ${chatId.substring(0, 10)}...';
