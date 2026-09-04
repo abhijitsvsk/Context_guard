@@ -331,7 +331,9 @@ class ContextGuardCDPService {
     if (live.level === 'UNKNOWN') {
       textContent = `${live.badge}`;
     } else {
-      const pctText = live.percentageUsed !== null ? `${live.percentageUsed}%` : 'NO DATA';
+      const isApprox = live.precision && (live.precision.includes('.pb') || live.precision.includes('Archive'));
+      const prefix = isApprox ? '~' : '';
+      const pctText = live.percentageUsed !== null ? `${prefix}${live.percentageUsed}%` : 'NO DATA';
       textContent = `${pctText} (${live.badge})`;
     }
     const hexColor = live.hexColor || live.colorHex || '#22C55E';
