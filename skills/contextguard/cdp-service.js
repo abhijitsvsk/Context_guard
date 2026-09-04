@@ -341,7 +341,7 @@ class ContextGuardCDPService {
     const js = `
     (function() {
       let el = document.getElementById('contextguard-dom-badge');
-      if (el && !el.querySelector('#contextguard-badge-header')) {
+      if (el && (!el.querySelector('#contextguard-badge-header') || !el.__cg_draggable)) {
         el.remove();
         el = null;
       }
@@ -349,10 +349,9 @@ class ContextGuardCDPService {
         el = document.createElement('div');
         el.id = 'contextguard-dom-badge';
         el.__isExpanded = false;
+        el.__cg_draggable = true;
 
         el.style.position = 'fixed';
-        el.style.top = '14px';
-        el.style.right = '280px';
         el.style.zIndex = '999999';
         el.style.background = '#0F172A';
         el.style.fontFamily = 'Consolas, monospace';
@@ -365,6 +364,21 @@ class ContextGuardCDPService {
         el.style.overflow = 'hidden';
         el.style.transition = 'border-radius 0.15s ease';
 
+        // Restore saved position if present
+        let savedPos = null;
+        try {
+          savedPos = JSON.parse(localStorage.getItem('contextguard_badge_pos') || 'null');
+        } catch(e) {}
+
+        if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
+          el.style.top = Math.max(0, Math.min(window.innerHeight - 30, savedPos.top)) + 'px';
+          el.style.left = Math.max(0, Math.min(window.innerWidth - 60, savedPos.left)) + 'px';
+          el.style.right = 'auto';
+        } else {
+          el.style.top = '14px';
+          el.style.right = '280px';
+        }
+
         const header = document.createElement('div');
         header.id = 'contextguard-badge-header';
         header.style.padding = '5px 14px';
@@ -372,7 +386,7 @@ class ContextGuardCDPService {
         header.style.alignItems = 'center';
         header.style.justifyContent = 'space-between';
         header.style.gap = '8px';
-        header.style.cursor = 'pointer';
+        header.style.cursor = 'grab';
         header.style.whiteSpace = 'nowrap';
 
         const title = document.createElement('span');
@@ -435,10 +449,73 @@ class ContextGuardCDPService {
         el.appendChild(panel);
         document.body.appendChild(el);
 
+        // Draggable mechanics
+        let isDragging = false;
+        let hasMoved = false;
+        let startX = 0, startY = 0;
+        let initialLeft = 0, initialTop = 0;
+
+        header.addEventListener('mousedown', function(e) {
+          if (e.button !== 0) return;
+          isDragging = false;
+          hasMoved = false;
+          startX = e.clientX;
+          startY = e.clientY;
+          const rect = el.getBoundingClientRect();
+          initialLeft = rect.left;
+          initialTop = rect.top;
+
+          function onMouseMove(e) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+              hasMoved = true;
+              isDragging = true;
+              header.style.cursor = 'grabbing';
+              document.body.style.userSelect = 'none';
+            }
+            if (isDragging) {
+              const maxLeft = Math.max(0, window.innerWidth - (el.offsetWidth || 150));
+              const maxTop = Math.max(0, window.innerHeight - (el.offsetHeight || 30));
+              const curLeft = Math.max(0, Math.min(maxLeft, initialLeft + dx));
+              const curTop = Math.max(0, Math.min(maxTop, initialTop + dy));
+              el.style.left = curLeft + 'px';
+              el.style.top = curTop + 'px';
+              el.style.right = 'auto';
+            }
+          }
+
+          function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove, true);
+            document.removeEventListener('mouseup', onMouseUp, true);
+            header.style.cursor = 'grab';
+            document.body.style.userSelect = '';
+            if (hasMoved) {
+              el.__justDragged = true;
+              setTimeout(function() { el.__justDragged = false; }, 150);
+              try {
+                const rect = el.getBoundingClientRect();
+                localStorage.setItem('contextguard_badge_pos', JSON.stringify({ top: Math.round(rect.top), left: Math.round(rect.left) }));
+              } catch(e) {}
+            }
+          }
+
+          document.addEventListener('mousemove', onMouseMove, true);
+          document.addEventListener('mouseup', onMouseUp, true);
+        });
+
         header.addEventListener('click', function(e) {
           e.stopPropagation();
+          if (el.__justDragged) {
+            el.__justDragged = false;
+            return;
+          }
           el.__isExpanded = !el.__isExpanded;
           updateView();
+        });
+
+        panel.addEventListener('mousedown', function(e) {
+          e.stopPropagation();
         });
 
         panel.addEventListener('click', function(e) {
@@ -477,6 +554,16 @@ class ContextGuardCDPService {
         if (panelEl) panelEl.style.display = isExp ? 'flex' : 'none';
         const arrowEl = document.getElementById('contextguard-badge-arrow');
         if (arrowEl) arrowEl.style.display = isExp ? 'inline' : 'none';
+
+        if (isExp && b.style.left && b.style.left !== 'auto') {
+          const rect = b.getBoundingClientRect();
+          if (rect.right > window.innerWidth) {
+            b.style.left = Math.max(0, window.innerWidth - rect.width - 10) + 'px';
+          }
+          if (rect.bottom > window.innerHeight) {
+            b.style.top = Math.max(0, window.innerHeight - rect.height - 10) + 'px';
+          }
+        }
       }
 
       if (window.__cg_doc_click_handler) {
@@ -485,6 +572,7 @@ class ContextGuardCDPService {
       }
       window.__cg_doc_click_handler = function(e) {
         const b = document.getElementById('contextguard-dom-badge');
+        if (b && b.__justDragged) return;
         if (b && !b.contains(e.target)) {
           const panel = document.getElementById('contextguard-badge-panel');
           if (b.__isExpanded || (panel && panel.style.display !== 'none')) {
